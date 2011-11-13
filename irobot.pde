@@ -7,8 +7,9 @@
 #include <Servo.h> 
  // create servo object to control a servo 
  // a maximum of eight servo objects can be created 
-Servo servo_head_lr; // left and right 30 is center, can be 0 to 60
-Servo servo_head_ud; // up and down, 0 is top, 58 is horizon, can be 0 to 60
+Servo servo_head_lr; // left and right, 0 to 180, 0 is right, 180 is left, 90 is forward
+//Servo servo_head_ud; // up and down, 0 is top, 58 is horizon, can be 0 to 60
+Servo servo_head_ud; // up and down, 0 to 180, 100 is vertical, 180 is horizon
 Servo servo_wheel_left;
 Servo servo_wheel_right;
 Servo servo_arm_left;
@@ -32,10 +33,12 @@ Servo servo_arm_right;
 
 int head_pos_lr = 30;
 int head_pos_ud = 10;
-#define HEAD_POS_LR_MAX  60
+#define HEAD_POS_LR_MAX  180
 #define HEAD_POS_LR_MIN 0
-#define HEAD_POS_UD_MAX 73
+#define HEAD_POS_UD_MAX 140
 #define HEAD_POS_UD_MIN 0
+#define HEAD_INIT_POS_LR 90
+#define HEAD_INIT_POS_UD 150
 
  
 #define WIRELESS_MODE_INFRA	1
@@ -73,7 +76,7 @@ unsigned char security_passphrase_len;
 // This is our page serving function that generates web pages
 boolean sendMyPage(char* URL) {
      
-    Serial.println(URL);
+  //  Serial.println(URL);
 
     // Check if the requested URL matches "/"
     if (strcmp(URL, "/") == 0) {
@@ -132,8 +135,8 @@ char* getWord(char* str){
     }
     
     *pp = 0;
-        Serial.println("getWord:");
-         Serial.println(str);
+        //Serial.println("getWord:");
+         //Serial.println(str);
     return pp+1;
 }
 boolean parseCmd(char* url)
@@ -165,12 +168,28 @@ boolean parseCmd(char* url)
      else if (strcmp(url+1, "r") ==0){
       move_right();
     }
-        else if (strcmp(url+1, "stop") ==0){
+     else if (strcmp(url+1, "stop") ==0){
       move_stop();
+    }
+      else if (strcmp(url+1, "dance") ==0){
+     dance();
+    }
+    else if (strcmp(url+1, "reset") == 0){
+      reset();
     }
   return false;
 }
-#define HD_STEP 10
+void reset(){
+  move_stop();
+    servo_head_lr.write(HEAD_INIT_POS_LR);
+  servo_head_ud.write(HEAD_INIT_POS_UD);
+   head_pos_ud = HEAD_INIT_POS_UD;
+   head_pos_lr = HEAD_INIT_POS_LR;
+   
+   servo_arm_left.write(0);
+   servo_arm_right.write(0);
+}
+#define HD_STEP 5
 void head_up(int n, int d, int s){
    // up
    int i;
@@ -199,43 +218,47 @@ void head_down(int n, int d, int s){
       head_pos_ud = i;
 }
 void doMoveHead(int c){
+
   int i=0;
-  Serial.println("doMoveHead");
+  //Serial.println("doMoveHead");
   Serial.println(c);
+  Serial.println(head_pos_lr);
     if (c == 12){
-      // turn left
-      if (head_pos_lr > HEAD_POS_LR_MAX- HD_STEP || head_pos_lr < HEAD_POS_LR_MIN + HD_STEP)
-        return;
+      // turn right
+     // if (head_pos_lr > HEAD_POS_LR_MAX- HD_STEP || head_pos_lr < HEAD_POS_LR_MIN + HD_STEP)
+       // return;
       for ( i = head_pos_lr; i>head_pos_lr- HD_STEP; i--){
         servo_head_lr.write(i);
       }
       head_pos_lr = i;
-      Serial.println(head_pos_lr);
+      //Serial.println(head_pos_lr);
     }else if (c == 11){
-            // turn right
-               if (head_pos_lr > HEAD_POS_LR_MAX- HD_STEP || head_pos_lr < HEAD_POS_LR_MIN + HD_STEP)
-        return;
+            // turn left
+       //        if (head_pos_lr > HEAD_POS_LR_MAX- HD_STEP || head_pos_lr < HEAD_POS_LR_MIN + HD_STEP)
+        //return;
         for ( i = head_pos_lr; i<head_pos_lr+ HD_STEP; i++){
         servo_head_lr.write(i);
       }
       head_pos_lr = i;
- Serial.println(head_pos_lr);
+ //Serial.println(head_pos_lr);
     }else if (c == 13){
       // up
-         if (head_pos_ud > HEAD_POS_UD_MAX- HD_STEP || head_pos_ud < HEAD_POS_UD_MIN + HD_STEP)
-        return;
+      //   if (head_pos_ud > HEAD_POS_UD_MAX- HD_STEP || head_pos_ud < HEAD_POS_UD_MIN + HD_STEP)
+        //return;
        for ( i = head_pos_ud; i>head_pos_ud- HD_STEP; i--){
         servo_head_ud.write(i);
       }
       head_pos_ud = i;
+    //  Serial.println(head_pos_ud);
     }else if (c == 14){
       // down
-      if (head_pos_ud > HEAD_POS_UD_MAX- HD_STEP || head_pos_ud < HEAD_POS_UD_MIN + HD_STEP)
-        return;
+   //   if (head_pos_ud > HEAD_POS_UD_MAX- HD_STEP || head_pos_ud < HEAD_POS_UD_MIN + HD_STEP)
+     //   return;
       for ( i = head_pos_ud; i<head_pos_ud+ HD_STEP; i++){
         servo_head_ud.write(i);
       }
       head_pos_ud = i;
+    //  Serial.println(head_pos_ud;
     }
      else if (c == 15){
       // shake
@@ -254,22 +277,26 @@ void doMoveHead(int c){
         servo_head_lr.write(i);
            delay(20);
       }
+      
     }
  
 }
 
 void dance(){
+ /* 
     servo_head_ud.write(50);
     head_pos_ud =50;
-    
+    */
+    reset();
+    int pos = head_pos_ud;
   for (int i = 0; i< 3; i++){
    move_left();
-   delay(50);
+  // delay(50);
    
- // servo_arm_left.write(120); // left low
-  //servo_arm_right.write(180); // right high
+  servo_arm_left.write(120); // left low
+  servo_arm_right.write(180); // right high
  
- // servo_head_ud.write(20);
+  servo_head_ud.write(100);
 /*  if (head_pos_ud -30 > 0){
    servo_head_ud.write(head_pos_ud -30);
    head_pos_ud -=30;
@@ -278,10 +305,10 @@ void dance(){
   delay(1000);
   
    move_right();
-    delay(50);
- // servo_arm_left.write(0);  // left high
-  //servo_arm_right.write(45); // right low
-//       servo_head_ud.write(60);
+  //  delay(50);
+  servo_arm_left.write(0);  // left high
+  servo_arm_right.write(45); // right low
+  servo_head_ud.write(130);
   /* if (head_pos_ud +30 < 60){
    servo_head_ud.write(head_pos_ud +30);
    head_pos_ud +=30;
@@ -289,8 +316,13 @@ void dance(){
    */
 
   delay(1000);
+  
   }
   move_stop();
+//  delay(5000);
+  
+   servo_head_ud.write(pos);
+    head_pos_ud =pos;
 }
 
 
@@ -304,9 +336,20 @@ void setup() {
   servo_arm_right.attach(SERVO_ARM_RIGHT_PIN);
 
 
-  servo_head_lr.write(30);
-  servo_head_ud.write(20);
-   head_pos_ud = 20;
+  servo_head_lr.write(HEAD_INIT_POS_LR);
+  servo_head_ud.write(HEAD_INIT_POS_UD);
+   head_pos_ud = HEAD_INIT_POS_UD;
+   head_pos_lr = HEAD_INIT_POS_LR;
+   
+   servo_arm_left.write(0);
+   servo_arm_right.write(0);
+ //  delay(1000);
+ //  servo_head_lr.write(180);
+ //  servo_head_ud.write(100);
+  //  servo_head_lr.write(90);
+ //      delay(1000);
+        //    servo_head_ud.write(90);
+   // servo_head_lr.write(120);
 //servo_arm_left.write(0);delay(1000);
 //servo_arm_left.write(120);delay(1000);servo_arm_left.write(0);
 /*for (int i =0; i <=120; i++){
@@ -329,7 +372,7 @@ for (int i =90; i >=0; i--){
   servo_arm_right.write(i);
   delay(50);//delay(1000);servo_arm_right.write(90);
 }*/
-dance();
+//dance();
 
   /*for (int i = 1; i< 20; i++){
   servo_head_ud.write(i);
@@ -342,14 +385,15 @@ dance();
   // Enable Serial output and ask WiServer to generate log messages (optional)
   Serial.begin(9600);
   //WiServer.enableVerboseMode(true);
-   Serial.println("---h---");
+ //  Serial.println("---h---");
 }
 int count = 0;
 void loop(){
+
   if (count == 1000)
    {
      count=0;
-     Serial.print("#");
+     //Serial.print("#");
    }
   else
   count++;
