@@ -194,7 +194,7 @@ int parseCmdParam(char* p){
       break;
   }
   
-  g_unit = *p;
+  g_unit = p[i];
   
   char b[20] = "";
   strcpy(b,p);
@@ -277,8 +277,9 @@ Serial.println(url);
 #define HD_UD_STEP 2
 void doMoveHeadUpDown(int code, char u, char s){
   Serial.println("-->code");
-  Serial.println(code);
+  Serial.print(s);Serial.print(code);Serial.println(g_unit);
   if (u ==0 || u=='c'){ // degree
+   Serial.println("degree");
     // calculate actual degree
     if (s == '+' )
       code = head_pos_ud + code;
@@ -286,6 +287,7 @@ void doMoveHeadUpDown(int code, char u, char s){
      code = head_pos_ud -code;
     else if (s != '=')
       return;
+       Serial.println("--->code");
        Serial.println(code);
     // validate
     if (code > HEAD_POS_UD_MAX || code < HEAD_POS_UD_MIN)
