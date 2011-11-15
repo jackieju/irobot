@@ -123,6 +123,8 @@ void move_stop(){
   servo_wheel_right.write(90);
 }
 // process str to get a word before '?' or '/', by set it to 0
+// e.g Input=>"mh-1/mh-2/mh-3" 
+//     str=>"mh-1", return "mh-2/mh-3"
 char* getWord(char* str){
     
     char* p = str;
@@ -139,9 +141,95 @@ char* getWord(char* str){
          //Serial.println(str);
     return pp+1;
 }
+
+
+// parse command and parameter from a word
+// e.g. "mh-1"
+//  g_cmd=>mh, g_param=>"-1", return "1"
+char g_cmd[10];
+char g_param[20];
+char g_sign;
+char g_unit;
+char* getCmd(char* str){
+    char* p = str;
+    char* pp=p;
+    int i = 0;
+    memset(g_cmd, 0, 10);
+    memset(g_param, 0, 10);
+    while (*pp != '-' && *pp != '+' && *pp != '=' && *pp != 0)
+    {
+      g_cmd[i] = *pp;
+      pp = pp+1;
+      i=i+1;
+    }
+    g_cmd[i] = 0;
+    strcpy(g_param, pp);
+     
+    *pp = 0;
+        //Serial.println("getWord:");
+         //Serial.println(str);
+    Serial.println(g_cmd);
+    Serial.println(g_param);
+    return pp+1;
+}
+// get meaning of parameter
+// e.g. "1c+2s" or "1" or "+1" mean 1 degree or HIGH
+//      "1s" means one step of unit
+//      "-1" meams minus 1 degree 
+// return the number, p=>+2s, g_sign => sign
+int parseCmdParam(char* p){
+  char *_p = p;
+  // sign
+  if (*p != '+' && *p != '-' && *p != '=')
+    g_sign='=';
+   else{
+    g_sign = *p;
+    p++;
+   }
+    
+   // digit code
+   int i = 0;
+  for ( i = 0; i< strlen(p); i++){
+    if (!(p[i] > 47 && p[i] < 58) )
+      break;
+  }
+  
+  g_unit = *p;
+  
+  char b[20] = "";
+  strcpy(b,p);
+  b[i] = 0;
+  int r = atoi(b);
+ 
+  strcpy(_p, b+i+1);
+  
+  Serial.println("--cmd--");
+  Serial.println(g_cmd);
+  Serial.println(g_param);
+  Serial.println(g_sign);
+  Serial.println(g_unit);
+  return r;
+}
+
+boolean strStarWith(char* s, char* p){
+  int ls = strlen(s);
+  int lp = strlen(p);
+  if (s < p)
+    return false;
+  if (s == p)
+    return strcmp(s,p) == 0;
+    int i = 0;
+    int j = 0;
+  for ( i = 0,  j = 0; i< strlen(s) && j < strlen(p); i++, j++){
+    if (s[i] != p[j])
+      return false;
+  }
+  return true;
+  
+}
 boolean parseCmd(char* url)
 {
-
+Serial.println(url);
   if (url[0] != '/')
     return false;
     
@@ -149,6 +237,7 @@ boolean parseCmd(char* url)
    if (len <= 1)
      return false;
      
+     char* str = url+1;
    char* p = getWord(url+1);
    
     if (strcmp(url+1, "mh")==0){
@@ -177,7 +266,48 @@ boolean parseCmd(char* url)
     else if (strcmp(url+1, "reset") == 0){
       reset();
     }
+    else if (strStarWith(url+1, "mhud") ){ // move head up and down
+      getCmd(str); 
+      int code = parseCmdParam(g_param);
+      doMoveHeadUpDown(code, g_unit, g_sign);
+    }
+
   return false;
+}
+#define HD_UD_STEP 2
+void doMoveHeadUpDown(int code, char u, char s){
+  Serial.println("-->code");
+  Serial.println(code);
+  if (u ==0 || u=='c'){ // degree
+    // calculate actual degree
+    if (s == '+' )
+      code = head_pos_ud + code;
+    else if (s == '-')
+     code = head_pos_ud -code;
+    else if (s != '=')
+      return;
+       Serial.println(code);
+    // validate
+    if (code > HEAD_POS_UD_MAX || code < HEAD_POS_UD_MIN)
+      return;
+     // write
+     servo_head_ud.write(code);
+     head_pos_ud = code;
+     return;
+  }else if(u == 's' ){ // step
+   if (s == '+' || s==0)
+      code = head_pos_ud + code* HD_UD_STEP;
+    else if (s == '-')
+     code = head_pos_ud -code* HD_UD_STEP;
+    else 
+      return;
+     if (code > HEAD_POS_UD_MAX || code < HEAD_POS_UD_MIN)
+      return;
+     servo_head_ud.write(code);
+     head_pos_ud = code;
+     return;
+  }
+   return;
 }
 void reset(){
   move_stop();
